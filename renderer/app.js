@@ -107,7 +107,11 @@
     setText('#logsPath', dashboard.logsDir);
     setText('#corePath', dashboard.corePath || '未找到，请运行 npm run install:core');
     $('#logTail').textContent = dashboard.logTail || '';
-    $('#bypassHosts').value = Array.isArray(settings.bypassHosts) ? settings.bypassHosts.join('\n') : '';
+
+    const bypassInput = $('#bypassHosts');
+    if (document.activeElement !== bypassInput) {
+      bypassInput.value = Array.isArray(settings.bypassHosts) ? settings.bypassHosts.join('\n') : '';
+    }
 
     $$('.mode-button').forEach(button => {
       button.classList.toggle('active', button.dataset.mode === settings.mode);
