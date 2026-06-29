@@ -1,0 +1,60 @@
+{
+  "name": "lorreyvpn",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LorreyVPN Windows desktop proxy client powered by Electron and mihomo.",
+  "main": "main.js",
+  "productName": "LorreyVPN",
+  "scripts": {
+    "start": "electron .",
+    "install:core": "node scripts/install-core.js",
+    "check": "node --check main.js && node --check preload.js && node --check renderer/app.js && node --check src/core/config.js && node --check src/core/controller.js && node --check src/core/mihomo.js && node --check src/platform/windows-proxy.js && node --check src/subscription/import.js && node --check scripts/install-core.js && node --check scripts/verify.js",
+    "verify": "node scripts/verify.js",
+    "pack:win": "electron-builder --win nsis portable"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.lorrey.vpn.windows",
+    "productName": "LorreyVPN",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "renderer/**/*",
+      "src/**/*",
+      "resources/clash-configs/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/clash-binaries",
+        "to": "clash-binaries",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LorreyVPN"
+    }
+  }
+}
