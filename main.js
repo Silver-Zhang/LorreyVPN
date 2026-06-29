@@ -23,7 +23,8 @@ let settings = {
   mode: 'rule',
   currentProxy: '',
   bypassHosts: [],
-  coreSecret: ''
+  coreSecret: '',
+  previousProxyState: null
 };
 
 function ensureDir(dir) {
@@ -220,18 +221,52 @@ async function stopCore() {
   return buildDashboard();
 }
 
+function compactProxySnapshot(status) {
+  if (!status || !status.supported) {
+    return null;
+  }
+  return {
+    enabled: Boolean(status.enabled),
+    proxyServer: String(status.proxyServer || ''),
+    proxyOverride: String(status.proxyOverride || '')
+  };
+}
+
+async function restorePreviousProxyState() {
+  if (settings.previousProxyState) {
+    await windowsProxy.restoreSystemProxy(settings.previousProxyState);
+    settings.previousProxyState = null;
+    return;
+  }
+  await windowsProxy.setSystemProxy(false, {
+    ports: DEFAULT_PORTS,
+    bypassHosts: settings.bypassHosts || []
+  });
+}
+
 async function setSystemProxy(enabled) {
   if (process.platform !== 'win32') {
     throw new Error('LorreyVPN 当前仅支持 Windows 系统代理。');
   }
+
   if (enabled) {
+    const before = await windowsProxy.getSystemProxyStatus();
+    if (!before.ownedByLorreyVPN && !settings.previousProxyState) {
+      settings.previousProxyState = compactProxySnapshot(before);
+      saveSettings();
+    }
     await startCore();
+    await windowsProxy.setSystemProxy(true, {
+      ports: DEFAULT_PORTS,
+      bypassHosts: settings.bypassHosts || []
+    });
+    settings.systemProxy = true;
+    saveSettings();
+    return buildDashboard();
   }
-  await windowsProxy.setSystemProxy(Boolean(enabled), {
-    ports: DEFAULT_PORTS,
-    bypassHosts: settings.bypassHosts || []
-  });
-  settings.systemProxy = Boolean(enabled);
+
+  await restorePreviousProxyState();
+  settings.systemProxy = false;
   saveSettings();
   return buildDashboard();
 }
@@ -300,7 +335,9 @@ async function cleanupBeforeQuit() {
   try {
     const status = await windowsProxy.getSystemProxyStatus().catch(() => null);
     if (status && status.ownedByLorreyVPN) {
-      await windowsProxy.setSystemProxy(false, { ports: DEFAULT_PORTS, bypassHosts: settings.bypassHosts || [] });
+      await restorePreviousProxyState();
+      settings.systemProxy = false;
+      saveSettings();
     }
     if (service) {
       await service.stop();
