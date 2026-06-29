@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LorreyVPN</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Windows Proxy Client</p>
+        <h1>LorreyVPN</h1>
+        <p class="subtitle">Electron + mihomo 的 Windows-only proxy-only 客户端。</p>
+      </div>
+      <div class="hero-actions">
+        <button id="refreshDashboard" class="secondary">刷新</button>
+        <button id="startCore">启动核心</button>
+        <button id="stopCore" class="danger">停止核心</button>
+      </div>
+    </section>
+
+    <section id="platformWarning" class="warning hidden">
+      LorreyVPN 当前专门面向 Windows。非 Windows 平台仅用于开发检查，不支持系统代理。
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>连接状态</h2>
+        <div class="status-grid">
+          <div><span>核心</span><strong id="coreState">-</strong></div>
+          <div><span>系统代理</span><strong id="systemProxyState">-</strong></div>
+          <div><span>模式</span><strong id="modeState">-</strong></div>
+          <div><span>当前节点</span><strong id="nodeState">-</strong></div>
+        </div>
+        <div class="row-actions">
+          <button id="enableProxy">开启系统代理</button>
+          <button id="disableProxy" class="secondary">关闭系统代理</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>代理模式</h2>
+        <div class="segmented">
+          <button class="mode-button" data-mode="rule">智能代理</button>
+          <button class="mode-button" data-mode="global">全局代理</button>
+          <button class="mode-button" data-mode="direct">直连模式</button>
+        </div>
+        <p class="hint">智能代理依赖配置文件中的规则；全局代理会优先使用当前节点；直连模式不经代理。</p>
+      </article>
+    </section>
+
+    <section class="card">
+      <h2>导入订阅</h2>
+      <form id="importForm" class="form-row">
+        <input id="subscriptionSource" type="text" placeholder="订阅 URL / sub://... / 本地 YAML 路径" />
+        <button type="submit">导入</button>
+      </form>
+      <p id="importResult" class="hint">支持 Clash/Mihomo YAML；基础支持 ss、vmess、trojan、vless URI 列表转换。</p>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>节点</h2>
+        <button id="delayAll" class="secondary">测试延迟</button>
+      </div>
+      <div id="nodes" class="nodes"></div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>直连/绕过地址</h2>
+        <textarea id="bypassHosts" rows="7" placeholder="每行一个域名或通配符，例如：&#10;*.local&#10;gitlab.example.org"></textarea>
+        <div class="row-actions">
+          <button id="saveBypass">保存</button>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>路径</h2>
+        <dl class="paths">
+          <dt>配置</dt><dd id="configPath">-</dd>
+          <dt>日志</dt><dd id="logsPath">-</dd>
+          <dt>核心</dt><dd id="corePath">-</dd>
+        </dl>
+        <div class="row-actions">
+          <button id="openConfig" class="secondary">打开配置目录</button>
+          <button id="openLogs" class="secondary">打开日志目录</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>核心日志</h2>
+        <button id="copyLog" class="secondary">复制日志</button>
+      </div>
+      <pre id="logTail"></pre>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>
