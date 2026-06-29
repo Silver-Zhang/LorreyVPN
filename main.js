@@ -68,8 +68,7 @@ function resolveRuntimePaths() {
     runtimeConfigFile: path.join(userData, 'runtime', 'config.yaml'),
     logsDir: path.join(userData, 'logs'),
     settingsFile: path.join(userData, 'settings.json'),
-    defaultConfigFile: path.join(localResources, 'clash-configs', 'config.yaml'),
-    iconFile: path.join(__dirname, 'renderer', 'lorreyvpn.png')
+    defaultConfigFile: path.join(localResources, 'clash-configs', 'config.yaml')
   };
 }
 
@@ -119,7 +118,11 @@ function createMainWindow() {
 }
 
 function createTray() {
-  tray = new Tray(path.join(__dirname, 'renderer', 'tray.png'));
+  const trayIcon = path.join(__dirname, 'renderer', 'tray.png');
+  if (!fs.existsSync(trayIcon)) {
+    return;
+  }
+  tray = new Tray(trayIcon);
   tray.setToolTip(APP_NAME);
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '打开 LorreyVPN', click: () => mainWindow ? mainWindow.show() : createMainWindow() },
