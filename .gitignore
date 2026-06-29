@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+*.log
+.DS_Store
+.env
+resources/clash-binaries/*.exe
+resources/clash-binaries/*.gz
+resources/clash-binaries/*.zip
+resources/clash-runtime/
