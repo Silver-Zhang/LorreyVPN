@@ -2,7 +2,7 @@
 
 const { execFile } = require('child_process');
 
-const INTERNET_SETTINGS = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings';
+const INTERNET_SETTINGS = String.raw`HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings`;
 
 function psSingleQuote(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
@@ -31,13 +31,13 @@ async function notifyProxyChanged() {
 Add-Type @"
 using System;
 using System.Runtime.InteropServices;
-public class NativeMethods {
+public class LorreyVpnNativeMethods {
   [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)]
   public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);
 }
 "@
 $result = [UIntPtr]::Zero
-[NativeMethods]::SendMessageTimeout([IntPtr]0xffff, 0x001A, [UIntPtr]::Zero, "Internet Settings", 0x0002, 5000, [ref]$result) | Out-Null
+[LorreyVpnNativeMethods]::SendMessageTimeout([IntPtr]0xffff, 0x001A, [UIntPtr]::Zero, "Internet Settings", 0x0002, 5000, [ref]$result) | Out-Null
 `;
   await runPowerShell(script);
 }
@@ -63,6 +63,29 @@ function buildProxyOverride(extraHosts = []) {
   return [...new Set([...defaults, ...clean])].join(';');
 }
 
+async function applySystemProxyState(state = {}) {
+  if (process.platform !== 'win32') {
+    throw new Error('Windows 系统代理接口只能在 Windows 上使用。');
+  }
+
+  const enabled = Boolean(state.enabled);
+  const lines = [
+    `$p=${psSingleQuote(INTERNET_SETTINGS)}`,
+    `Set-ItemProperty -Path $p -Name ProxyEnable -Value ${enabled ? 1 : 0}`
+  ];
+
+  if (Object.prototype.hasOwnProperty.call(state, 'proxyServer')) {
+    lines.push(`Set-ItemProperty -Path $p -Name ProxyServer -Value ${psSingleQuote(state.proxyServer || '')}`);
+  }
+  if (Object.prototype.hasOwnProperty.call(state, 'proxyOverride')) {
+    lines.push(`Set-ItemProperty -Path $p -Name ProxyOverride -Value ${psSingleQuote(state.proxyOverride || '')}`);
+  }
+
+  await runPowerShell(lines);
+  await notifyProxyChanged();
+  return getSystemProxyStatus();
+}
+
 async function setSystemProxy(enabled, options = {}) {
   if (process.platform !== 'win32') {
     throw new Error('Windows 系统代理接口只能在 Windows 上使用。');
@@ -73,24 +96,29 @@ async function setSystemProxy(enabled, options = {}) {
   const proxyOverride = buildProxyOverride(options.bypassHosts || []);
 
   if (!enabled) {
-    await runPowerShell([
-      `$p=${psSingleQuote(INTERNET_SETTINGS)}`,
-      'Set-ItemProperty -Path $p -Name ProxyEnable -Value 0',
-      `Set-ItemProperty -Path $p -Name ProxyServer -Value ${psSingleQuote(proxyServer)}`,
-      `Set-ItemProperty -Path $p -Name ProxyOverride -Value ${psSingleQuote(proxyOverride)}`
-    ]);
-    await notifyProxyChanged();
-    return { enabled: false, proxyServer, proxyOverride };
+    return applySystemProxyState({
+      enabled: false,
+      proxyServer,
+      proxyOverride
+    });
   }
 
-  await runPowerShell([
-    `$p=${psSingleQuote(INTERNET_SETTINGS)}`,
-    'Set-ItemProperty -Path $p -Name ProxyEnable -Value 1',
-    `Set-ItemProperty -Path $p -Name ProxyServer -Value ${psSingleQuote(proxyServer)}`,
-    `Set-ItemProperty -Path $p -Name ProxyOverride -Value ${psSingleQuote(proxyOverride)}`
-  ]);
-  await notifyProxyChanged();
-  return { enabled: true, proxyServer, proxyOverride };
+  return applySystemProxyState({
+    enabled: true,
+    proxyServer,
+    proxyOverride
+  });
+}
+
+async function restoreSystemProxy(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') {
+    return setSystemProxy(false);
+  }
+  return applySystemProxyState({
+    enabled: Boolean(snapshot.enabled),
+    proxyServer: String(snapshot.proxyServer || ''),
+    proxyOverride: String(snapshot.proxyOverride || '')
+  });
 }
 
 async function getSystemProxyStatus() {
@@ -122,6 +150,8 @@ async function getSystemProxyStatus() {
 
 module.exports = {
   setSystemProxy,
+  restoreSystemProxy,
+  applySystemProxyState,
   getSystemProxyStatus,
   buildProxyServer,
   buildProxyOverride
