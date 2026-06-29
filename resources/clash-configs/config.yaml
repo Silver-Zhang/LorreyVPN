@@ -1,0 +1,20 @@
+port: 4780
+socks-port: 4781
+allow-lan: false
+bind-address: 127.0.0.1
+mode: rule
+log-level: info
+external-controller: 127.0.0.1:4790
+secret: ""
+
+proxies: []
+
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies:
+      - DIRECT
+
+rules:
+  - GEOIP,CN,DIRECT
+  - MATCH,Proxy
